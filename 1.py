@@ -27,8 +27,6 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 
-proxy_url = f'http://user209761:mk4ioy@91.147.118.187:8627'
-
 headers = {
     'Accept' : 'application/json, text/*',
     'Accept-Encoding' : 'gzip, deflate, br, zstd',
@@ -61,7 +59,7 @@ payload = {
 
 async def start():
     # timeout = httpx.Timeout(30.0, connect=60.0)
-    async with httpx.AsyncClient(proxies=proxy_url) as client:
+    async with httpx.AsyncClient() as client:
         try:
             shop_response = await client.post('https://kaspi.kz/yml/offer-view/offers/113196650', headers=headers, json=payload)
             print('heell load')
