@@ -57,22 +57,47 @@ payload = {
         'sortOption': 'PRICE',
     }
 
-async def start():
-    # timeout = httpx.Timeout(30.0, connect=60.0)
+success_count = 0
+forbidden_count = 0
+other_errors_count = 0
+
+# Блокировка для синхронизации доступа к счетчикам
+lock = asyncio.Lock()
+
+async def fetch():
+    global success_count, forbidden_count, other_errors_count
+    
     async with httpx.AsyncClient() as client:
         try:
             shop_response = await client.post('https://kaspi.kz/yml/offer-view/offers/113196650', headers=headers, json=payload)
             print('heell load')
-            if shop_response.status_code == 200:
-                shop_data = shop_response.json()
-                print('hell yeah', shop_response.status_code)
-            else:
-                print('hell shiiit', shop_response.status_code)
+            
+            async with lock:  # Синхронизация обновления счетчиков
+                if shop_response.status_code == 200:
+                    success_count += 1
+                    print('hell yeah', shop_response.status_code)
+                elif shop_response.status_code == 403:
+                    forbidden_count += 1
+                    print('403 Forbidden', shop_response.status_code)
+                else:
+                    other_errors_count += 1
+                    print(f'Other error {shop_response.status_code}')
 
         except httpx.ReadTimeout:
             print("Request timed out")
         except Exception as e:
             print(f"An error occurred: {e}")
+
+async def start():
+    tasks = []
+    for _ in range(100):  # Запускаем 100 запросов
+        tasks.append(fetch())
+    await asyncio.gather(*tasks)  # Выполняем все запросы одновременно
+
+    # Выводим результаты после выполнения всех запросов
+    print(f'Successful requests (200): {success_count}')
+    print(f'Forbidden requests (403): {forbidden_count}')
+    print(f'Other errors: {other_errors_count}')
 
 if __name__ == "__main__":
     asyncio.run(start())
